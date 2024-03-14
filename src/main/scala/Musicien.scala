@@ -1,65 +1,43 @@
 package upmc.akka.leader
 
-import akka.actor._
-
+import akka.actor.{Props,  Actor,  ActorRef,  ActorSystem, ActorSelection}
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext
+import ExecutionContext.Implicits.global
+case class PlayConductor()
+case class Maestro(id : Int)
+case class Suicide()
+case class Election()
+case class Elu()
 case class Start ()
-case class Bandmaster(id : Int)
-case class ElectBandmaster()
-case class IsElected()
-case class Leave()
-
-
+case class GetMeasure(lancement : Int)
 class Musicien (val id:Int, val terminaux:List[Terminal]) extends Actor {
 
-    // Les differents acteurs du systeme
-    val displayActor = context.actorOf(Props[DisplayActor], name = "displayActor")
-    val database = context.actorOf(Props[DataBaseActor], name = "database")
-    val player = context.actorOf(Props[PlayerActor], name = "player")
+ var musiciens = new Array[ActorSelection](4)
+     val display = context.actorOf(Props[DisplayActor], name = "displayActor")
+     val database = context.actorOf(Props[DataBaseActor], name = "database")
+     var vivants = Array.fill[Boolean](4)(false)
+     var idMaestro = -1
+     def lancement : Int = {
+            val r = new scala.util.Random
+            val d1 = r.nextInt(5) + 1
+            val d2 = r.nextInt(5) + 1
+            d1 + d2
+     }
+     vivants(id) = true
 
-    var availableMusicians = new Array[Boolean](4)
-    var allMusicians = new Array[ActorSelection](4)
-    var leader = -1
-
-    availableMusicians(id) = true 
-
-    for(i <- 0 to 3) {
-        if (i != id){
-            allMusicians(i) = context.actorSelection("akka.tcp://MozartSystem" + i + "@127.0.0.1:600" + i + "/user/Node" + i + "/Musicien" + i)
-            availableMusicians(i) = false
-        }
-    }
-
-    def receive = {
-        case Start => {
-            displayActor ! Message ("Musicien " + this.id + " is created")
-        }
-        case Bandmaster(idMusician) => {
-            if (idMusician != this.id && availableMusicians(idMusician)){
-                leader = idMusician
+          (0 to 3).foreach { i =>
+          musiciens(i) = context.actorSelection(s"akka.tcp://MozartSystem$i@127.0.0.1:600$i/user/Node$i/Musicien$i")}
+     if(idMaestro == id || idMaestro == -1) self ! Election  
+     def receive: Receive = {
+     case Start => display ! Message ("Le node " + this.id + " est dans la zone.")
+     case Election => if(idMaestro == id|| idMaestro == -1) self ! Elu
+     case Elu =>
+            if(idMaestro != id) {
+                idMaestro = id
+                display ! Message ("Le Maestro est le node " + id)
+                self ! PlayConductor
             }
-        }
-
-        case ElectBandmaster() => {
-            var someOneElected = false
-            var i = 0
-            while (i < 4 && !someOneElected) {
-                if (availableMusicians(i)) {
-                    someOneElected = true
-                    if (i == id) 
-                        self ! IsElected
-                    else 
-                        leader = i
-                }
-                i += 1
-            }
-        }
-
-        case IsElected =>
-            if(leader != id) {
-                leader = id
-                displayActor ! Message ("Musicien " + this.id + " est le leader")
-                self ! player
-            }
-        
-    }
+      case PlayConductor => if(idMaestro == id) database ! GetMeasure (lancement)
+     }
 }
