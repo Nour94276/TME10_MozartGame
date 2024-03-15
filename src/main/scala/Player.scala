@@ -8,6 +8,7 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 import ExecutionContext.Implicits.global
 
+
 import akka.actor.{Props, Actor, ActorRef, ActorSystem}
 
 
@@ -39,7 +40,7 @@ def note_off (pitch:Int, chan:Int): Unit = {
 
 //////////////////////////////////////////////////
 
-class PlayerActor (database : ActorRef) extends Actor{
+class PlayerActor extends Actor{
   import DataBaseActor._
   import PlayerActor._
   device.open()

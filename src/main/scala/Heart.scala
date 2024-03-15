@@ -2,10 +2,16 @@ package upmc.akka.leader
 
 import akka.actor.{Props,  Actor,  ActorRef,  ActorSystem, ActorSelection}
 
-case class Check()
 
 class HeartActor(val id : Int) extends Actor {
-     def receive: Receive = {
-     case Check => sender ! CheckChecker(id)
-     }
+    var leader = false
+
+    def receive = {
+        case Check => {
+            sender ! IamAlive(id, leader)
+        }
+        case IamTheLeader => {
+            leader = true
+        }
+    }
 }
